@@ -1,4 +1,5 @@
-name: Test, Build, and Deploy
+
+name: CI/CD Workflow
 
 on:
   push:
@@ -10,7 +11,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      # Cache node_modules to speed up workflow
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Run Jest tests
+      - name: Run Jest tests
+        id: test-results
+        run: npx jest --ci --reporters=default
+
+  build:
+    name: Build Project
+    needs: test
+    runs-on: ubuntu-latest
+    if: needs.test.result == 'success'
+
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -21,36 +57,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
-        id: test-results
-        run: npm test
-
-  build:
-    name: Build
-    needs: test
-    runs-on: ubuntu-latest
-    if: needs.test.result == 'success'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build project
+      - name: Build Project
         run: |
-          echo "Building project..."
-          npm run build
+          echo "Building the project..."
+          
 
   deploy:
-    name: Deploy
+    name: Deploy Project
     needs: build
     runs-on: ubuntu-latest
     if: needs.build.result == 'success'
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy application
+      - name: Deploy Project
         run: |
-          echo "Deploying application..."
-          # e.g., npx railway up
+          echo "Deploying the project..."
